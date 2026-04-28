@@ -13,6 +13,7 @@ import {
 // --- INTEGRASI FIREBASE CLOUD ---
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCsyWRS_TRjv-TZ2xm118fBL6ULvqhPTwA",
@@ -26,6 +27,7 @@ const firebaseConfig = {
 // Inisialisasi Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 export default function App() {
   // --- State: Auth & User ---
@@ -139,33 +141,62 @@ export default function App() {
     let unsubHolidays = () => {};
     let unsubRoles = () => {};
 
-    try {
-      unsubEmp = onSnapshot(collection(db, "employees"), (snap) => {
-        if(!snap.empty) setEmployees(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      }, (err) => console.error("FB Emp:", err));
+    const initFirebase = async () => {
+      try {
+        // Bypass blokir keamanan awal Firebase
+        await signInAnonymously(auth);
 
-      unsubStores = onSnapshot(collection(db, "stores"), (snap) => {
-        if(!snap.empty) setStores(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      }, (err) => console.error("FB Store:", err));
+        unsubEmp = onSnapshot(collection(db, "employees"), (snap) => {
+          if (snap.empty) {
+            // Tulis data ke Firebase secara permanen jika masih kosong
+            const initialEmployees = [
+              { id: 'EMP-001', name: 'Budi Santoso', email: 'budi.contoh@gmail.com', role: 'Kasir', store: 'Cabang Sudirman', pin: '1234' },
+              { id: 'EMP-002', name: 'Siti Aminah', email: 'siti.aminah@gmail.com', role: 'Pramuniaga', store: 'Cabang Thamrin', pin: '5678' },
+              { id: 'EMP-003', name: 'Agus Pratama', email: 'agus.p@gmail.com', role: 'SPV', store: 'Cabang Sudirman', pin: '1234' },
+            ];
+            initialEmployees.forEach(emp => setDoc(doc(db, "employees", emp.id), emp));
+          } else {
+            setEmployees(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+          }
+        }, (err) => console.error("FB Emp:", err));
 
-      unsubReports = onSnapshot(collection(db, "reports"), (snap) => {
-        if(!snap.empty) setReports(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      }, (err) => console.error("FB Rep:", err));
+        unsubStores = onSnapshot(collection(db, "stores"), (snap) => {
+          if (snap.empty) {
+            const initialStores = [
+              { id: 'STR-01', name: 'Cabang Sudirman', lat: '-6.1753924', lng: '106.8271528', radius: 100 },
+              { id: 'STR-02', name: 'Cabang Thamrin', lat: '-6.1834000', lng: '106.8200000', radius: 150 },
+            ];
+            initialStores.forEach(s => setDoc(doc(db, "stores", s.id), s));
+          } else {
+            setStores(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+          }
+        }, (err) => console.error("FB Store:", err));
 
-      unsubLeaves = onSnapshot(collection(db, "leaveRequests"), (snap) => {
-        if(!snap.empty) setLeaveRequests(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      }, (err) => console.error("FB Leave:", err));
+        unsubReports = onSnapshot(collection(db, "reports"), (snap) => {
+          setReports(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        }, (err) => console.error("FB Rep:", err));
 
-      unsubHolidays = onSnapshot(collection(db, "holidays"), (snap) => {
-        if(!snap.empty) setHolidays(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      }, (err) => console.error("FB Hol:", err));
+        unsubLeaves = onSnapshot(collection(db, "leaveRequests"), (snap) => {
+          setLeaveRequests(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        }, (err) => console.error("FB Leave:", err));
 
-      unsubRoles = onSnapshot(doc(db, "settings", "roles"), (document) => {
-        if (document.exists() && document.data().list) setRoles(document.data().list);
-      }, (err) => console.error("FB Role:", err));
-    } catch (error) {
-      console.log("Menjalankan Mode Offline karena Firebase tidak siap.");
-    }
+        unsubHolidays = onSnapshot(collection(db, "holidays"), (snap) => {
+          setHolidays(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        }, (err) => console.error("FB Hol:", err));
+
+        unsubRoles = onSnapshot(doc(db, "settings", "roles"), (document) => {
+          if (document.exists() && document.data().list) {
+            setRoles(document.data().list);
+          } else {
+            setDoc(doc(db, "settings", "roles"), { list: ['Kasir', 'Pramuniaga', 'SPV', 'Manager', 'Staff Admin'] });
+          }
+        }, (err) => console.error("FB Role:", err));
+      } catch (error) {
+        console.log("Menjalankan Mode Offline karena Firebase tidak siap.", error);
+      }
+    };
+
+    initFirebase();
 
     return () => {
       clearInterval(timer);
