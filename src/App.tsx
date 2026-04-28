@@ -1,110 +1,107 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Clock, MapPin, User, LogOut, Home, 
   Briefcase, CheckCircle, Menu, X, FileText, 
   ChevronRight, Lock, AlertCircle,
   Users, Settings, Database, Plus, Edit, Trash2, Search, Save,
   ChevronDown, Filter, Calendar, Tag, CalendarDays, Check,
-  Image as ImageIcon, Palmtree, History, Sun, Moon, Clock8,
-  WalletCards, Receipt, Mail
+  Image as ImageIcon, Palmtree, History, Sun, Moon,
+  WalletCards, Receipt, Mail 
 } from 'lucide-react';
-
-const GOOGLE_SCRIPT_URL = ''; 
 
 export default function App() {
   // --- State: Auth & User ---
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loginForm, setLoginForm] = useState({ id: '', pin: '' });
-  const [loginError, setLoginError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [user, setUser] = useState<any>(null);
+  const [loginForm, setLoginForm] = useState<any>({ id: '', pin: '' });
+  const [loginError, setLoginError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // --- State: Location & Time ---
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [userLocation, setUserLocation] = useState(null);
-  const [locationError, setLocationError] = useState('');
-  const [distanceToStore, setDistanceToStore] = useState(null);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [userLocation, setUserLocation] = useState<any>(null);
+  const [locationError, setLocationError] = useState<string>('');
+  const [distanceToStore, setDistanceToStore] = useState<number | null>(null);
 
   // --- State: Navigation & Attendance ---
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [attendanceState, setAttendanceState] = useState('out'); 
-  const [todayLog, setTodayLog] = useState({ in: null, out: null, shift: '', status: '' });
-  const [selectedShift, setSelectedShift] = useState(''); 
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [attendanceState, setAttendanceState] = useState<string>('out'); 
+  const [todayLog, setTodayLog] = useState<any>({ in: null, out: null, shift: '', status: '' });
+  const [selectedShift, setSelectedShift] = useState<string>(''); 
 
   const MAX_RADIUS = 100;
 
   // --- Admin Data States ---
-  const [roles, setRoles] = useState(['Kasir', 'Cook', 'SPV', 'Manager', 'Staff Admin']);
-  const [newRole, setNewRole] = useState('');
+  const [roles, setRoles] = useState<string[]>(['Kasir', 'Pramuniaga', 'SPV', 'Manager', 'Staff Admin']);
+  const [newRole, setNewRole] = useState<string>('');
 
-  // Tambahan state: 'pin' untuk login dinamis tiap karyawan
-  const [employees, setEmployees] = useState([
+  const [employees, setEmployees] = useState<any[]>([
     { id: 'EMP-001', name: 'Budi Santoso', email: 'budi.contoh@gmail.com', role: 'Kasir', store: 'Cabang Sudirman', pin: '1234' },
     { id: 'EMP-002', name: 'Siti Aminah', email: 'siti.aminah@gmail.com', role: 'Pramuniaga', store: 'Cabang Thamrin', pin: '5678' },
     { id: 'EMP-003', name: 'Agus Pratama', email: 'agus.p@gmail.com', role: 'SPV', store: 'Cabang Sudirman', pin: '1234' },
   ]);
   
-  const [stores, setStores] = useState([
+  const [stores, setStores] = useState<any[]>([
     { id: 'STR-01', name: 'Cabang Sudirman', lat: '-6.1753924', lng: '106.8271528', radius: 100 },
     { id: 'STR-02', name: 'Cabang Thamrin', lat: '-6.1834000', lng: '106.8200000', radius: 150 },
   ]);
   
-  const [reports, setReports] = useState([
+  const [reports, setReports] = useState<any[]>([
     { id: 1, date: '2026-04-28', empId: 'EMP-001', name: 'Budi Santoso', store: 'Cabang Sudirman', in: '07:55', out: '15:35', status: 'Tepat Waktu' },
     { id: 2, date: '2026-04-28', empId: 'EMP-002', name: 'Siti Aminah', store: 'Cabang Thamrin', in: '14:20', out: '21:30', status: 'Terlambat' },
     { id: 3, date: '2026-04-29', empId: 'EMP-001', name: 'Budi Santoso', store: 'Cabang Sudirman', in: '08:00', out: '16:00', status: 'Tepat Waktu' },
   ]);
 
-  const [leaveRequests, setLeaveRequests] = useState([
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([
     { id: 'LV-001', empId: 'EMP-002', name: 'Siti Aminah', type: 'Sakit', startDate: '2026-04-20', endDate: '2026-04-23', reason: 'Tipus (Rawat Inap)', status: 'Disetujui', attachment: null },
     { id: 'LV-002', empId: 'EMP-001', name: 'Budi Santoso', type: 'Lembur', startDate: '2026-04-28', endDate: '2026-04-28', reason: 'Stok Opname Akhir Bulan', status: 'Disetujui', attachment: null }
   ]);
-  const [leaveForm, setLeaveForm] = useState({ type: 'Sakit', startDate: '', endDate: '', reason: '', attachment: null });
-  const [viewAttachmentUrl, setViewAttachmentUrl] = useState(null); 
+  const [leaveForm, setLeaveForm] = useState<any>({ type: 'Sakit', startDate: '', endDate: '', reason: '', attachment: null });
+  const [viewAttachmentUrl, setViewAttachmentUrl] = useState<any>(null); 
 
-  const [holidays, setHolidays] = useState([
+  const [holidays, setHolidays] = useState<any[]>([
     { id: 'HOL-001', date: '2026-05-01', name: 'Hari Buruh Internasional' }
   ]);
-  const [showHolidayModal, setShowHolidayModal] = useState(false);
-  const [holidayForm, setHolidayForm] = useState({ id: '', date: '', name: '' });
-  const [isEditingHoliday, setIsEditingHoliday] = useState(false);
+  const [showHolidayModal, setShowHolidayModal] = useState<boolean>(false);
+  const [holidayForm, setHolidayForm] = useState<any>({ id: '', date: '', name: '' });
+  const [isEditingHoliday, setIsEditingHoliday] = useState<boolean>(false);
 
-  const [payrollConfig, setPayrollConfig] = useState({
+  const [payrollConfig, setPayrollConfig] = useState<any>({
     empId: '',
     gajiPokok: 3000000,
     tunjangan: 500000,
     manualAlfa: 0 
   });
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [reportFilterDate, setReportFilterDate] = useState('2026-04-28');
-  const [reportFilterStore, setReportFilterStore] = useState('Semua Toko');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [reportFilterDate, setReportFilterDate] = useState<string>('2026-04-28');
+  const [reportFilterStore, setReportFilterStore] = useState<string>('Semua Toko');
   
-  const [showEmpModal, setShowEmpModal] = useState(false);
-  const [empForm, setEmpForm] = useState({ id: '', name: '', email: '', role: '', store: '', pin: '' });
-  const [isEditingEmp, setIsEditingEmp] = useState(false);
+  const [showEmpModal, setShowEmpModal] = useState<boolean>(false);
+  const [empForm, setEmpForm] = useState<any>({ id: '', name: '', email: '', role: '', store: '', pin: '' });
+  const [isEditingEmp, setIsEditingEmp] = useState<boolean>(false);
 
-  const [showStoreModal, setShowStoreModal] = useState(false);
-  const [storeForm, setStoreForm] = useState({ id: '', name: '', lat: '', lng: '', radius: '' });
-  const [isEditingStore, setIsEditingStore] = useState(false);
+  const [showStoreModal, setShowStoreModal] = useState<boolean>(false);
+  const [storeForm, setStoreForm] = useState<any>({ id: '', name: '', lat: '', lng: '', radius: 100 });
+  const [isEditingStore, setIsEditingStore] = useState<boolean>(false);
 
-  const [dialog, setDialog] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
+  const [dialog, setDialog] = useState<any>({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
 
   // --- Helper Functions ---
-  const showAlert = (title, message) => setDialog({ isOpen: true, type: 'alert', title, message, onConfirm: null });
-  const showConfirm = (title, message, onConfirmCallback) => setDialog({ isOpen: true, type: 'confirm', title, message, onConfirm: onConfirmCallback });
+  const showAlert = (title: string, message: string) => setDialog({ isOpen: true, type: 'alert', title, message, onConfirm: null });
+  const showConfirm = (title: string, message: string, onConfirmCallback: any) => setDialog({ isOpen: true, type: 'confirm', title, message, onConfirm: onConfirmCallback });
   const closeDialog = () => setDialog({ ...dialog, isOpen: false });
 
-  const formatRupiah = (number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+  const formatRupiah = (number: any) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(number) || 0);
   };
 
-  const getDaysDiff = (start, end) => {
+  const getDaysDiff = (start: any, end: any) => {
     const date1 = new Date(start);
     const date2 = new Date(end);
-    const diffTime = Math.abs(date2 - date1);
+    const diffTime = Math.abs(date2.getTime() - date1.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
   };
 
@@ -115,7 +112,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn && user && user.role !== 'admin') {
+    if (isLoggedIn && user && user?.role !== 'admin') {
       getLocation();
     }
   }, [isLoggedIn, user]);
@@ -130,7 +127,7 @@ export default function App() {
         (position) => {
           const currentLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
           setUserLocation(currentLoc);
-          if (user && user.storeLat && user.storeLng) {
+          if (user && user?.storeLat && user?.storeLng) {
             const dist = calculateDistance(currentLoc.lat, currentLoc.lng, user.storeLat, user.storeLng);
             setDistanceToStore(Math.round(dist));
           }
@@ -143,7 +140,7 @@ export default function App() {
     }
   };
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const calculateDistance = (lat1: any, lon1: any, lat2: any, lon2: any) => {
     const R = 6371e3; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -155,7 +152,7 @@ export default function App() {
   };
 
   // --- API Handlers ---
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
     setLoginError('');
@@ -204,9 +201,9 @@ export default function App() {
       const newReport = {
         id: Date.now(),
         date: todayDateString,
-        empId: user.id,
-        name: user.name,
-        store: user.storeName,
+        empId: user?.id,
+        name: user?.name,
+        store: user?.storeName,
         in: '-',
         out: '-',
         status: 'Libur Shift'
@@ -219,7 +216,7 @@ export default function App() {
     });
   };
 
-  const handleClockAction = async (type) => {
+  const handleClockAction = async (type: string) => {
     if (!selectedShift) {
       showAlert("Pilih Shift", "Silakan pilih shift Anda hari ini terlebih dahulu.");
       return;
@@ -276,9 +273,9 @@ export default function App() {
       const newReport = {
         id: Date.now(),
         date: todayDateString,
-        empId: user.id,
-        name: user.name,
-        store: user.storeName,
+        empId: user?.id,
+        name: user?.name,
+        store: user?.storeName,
         in: todayLog.in,
         out: timeString,
         status: finalStatus
@@ -299,7 +296,7 @@ export default function App() {
   };
 
   // --- Leave / Cuti / Lembur Functions ---
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: any) => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
@@ -314,12 +311,12 @@ export default function App() {
     }
   };
 
-  const handleLeaveSubmit = (e) => {
+  const handleLeaveSubmit = (e: any) => {
     e.preventDefault();
     const newRequest = {
       id: `REQ-${Math.floor(Math.random() * 900) + 100}`,
-      empId: user.id,
-      name: user.name,
+      empId: user?.id,
+      name: user?.name,
       type: leaveForm.type,
       startDate: leaveForm.startDate,
       endDate: leaveForm.type === 'Lembur' ? leaveForm.startDate : leaveForm.endDate,
@@ -332,7 +329,7 @@ export default function App() {
     showAlert('Berhasil Terkirim', 'Pengajuan Anda telah dikirim dan menunggu persetujuan Admin.');
   };
 
-  const handleUpdateLeaveStatus = (id, newStatus) => {
+  const handleUpdateLeaveStatus = (id: any, newStatus: string) => {
     showConfirm('Konfirmasi Status', `Anda yakin ingin ${newStatus === 'Disetujui' ? 'Menyetujui' : 'Menolak'} pengajuan ini?`, () => {
       setLeaveRequests(leaveRequests.map(req => req.id === id ? { ...req, status: newStatus } : req));
     });
@@ -348,13 +345,20 @@ export default function App() {
     const matchStore = reportFilterStore === 'Semua Toko' ? true : rep.store === reportFilterStore;
     return matchDate && matchStore;
   });
-  const handleAddRole = (e) => {
+
+  const handleAddRole = (e: any) => {
     e.preventDefault();
-    if (newRole.trim() !== '' && !roles.includes(newRole.trim())) { setRoles([...roles, newRole.trim()]); setNewRole(''); }
+    if (newRole.trim() !== '' && !roles.includes(newRole.trim())) { 
+      setRoles([...roles, newRole.trim()]); 
+      setNewRole(''); 
+    }
   };
-  const handleDeleteRole = (roleToDelete) => { showConfirm('Hapus Jabatan', `Yakin ingin menghapus jabatan: ${roleToDelete}?`, () => setRoles(roles.filter(role => role !== roleToDelete))); };
   
-  const openEmpModal = (emp = null) => {
+  const handleDeleteRole = (roleToDelete: string) => { 
+    showConfirm('Hapus Jabatan', `Yakin ingin menghapus jabatan: ${roleToDelete}?`, () => setRoles(roles.filter(role => role !== roleToDelete))); 
+  };
+  
+  const openEmpModal = (emp: any = null) => {
     if (emp) { 
       setEmpForm(emp); 
       setIsEditingEmp(true); 
@@ -365,7 +369,7 @@ export default function App() {
     setShowEmpModal(true);
   };
   
-  const saveEmp = (e) => {
+  const saveEmp = (e: any) => {
     e.preventDefault();
     if (isEditingEmp) { 
       setEmployees(employees.map(emp => emp.id === empForm.id ? empForm : emp)); 
@@ -376,37 +380,69 @@ export default function App() {
     showAlert('Berhasil Disimpan', `Data karyawan ${empForm.name} telah berhasil ${isEditingEmp ? 'diperbarui' : 'ditambahkan'}.`);
   };
   
-  const deleteEmp = (id) => { showConfirm('Hapus Karyawan', 'Yakin ingin menghapus karyawan ini secara permanen?', () => setEmployees(employees.filter(emp => emp.id !== id))); };
+  const deleteEmp = (id: string) => { 
+    showConfirm('Hapus Karyawan', 'Yakin ingin menghapus karyawan ini secara permanen?', () => setEmployees(employees.filter(emp => emp.id !== id))); 
+  };
   
-  const openStoreModal = (store = null) => {
-    if (store) { setStoreForm(store); setIsEditingStore(true); } else { setStoreForm({ id: `STR-${Math.floor(Math.random() * 90) + 10}`, name: '', lat: '', lng: '', radius: 100 }); setIsEditingStore(false); }
+  const openStoreModal = (store: any = null) => {
+    if (store) { 
+      setStoreForm(store); 
+      setIsEditingStore(true); 
+    } else { 
+      setStoreForm({ id: `STR-${Math.floor(Math.random() * 90) + 10}`, name: '', lat: '', lng: '', radius: 100 }); 
+      setIsEditingStore(false); 
+    }
     setShowStoreModal(true);
   };
-  const saveStore = (e) => {
+  
+  const saveStore = (e: any) => {
     e.preventDefault();
-    if (isEditingStore) { setStores(stores.map(st => st.id === storeForm.id ? storeForm : st)); } else { setStores([...stores, storeForm]); }
+    if (isEditingStore) { 
+      setStores(stores.map(st => st.id === storeForm.id ? storeForm : st)); 
+    } else { 
+      setStores([...stores, storeForm]); 
+    }
     setShowStoreModal(false);
   };
-  const deleteStore = (id) => { showConfirm('Hapus Cabang Toko', 'Yakin ingin menghapus cabang toko beserta pengaturan GPS-nya?', () => setStores(stores.filter(st => st.id !== id))); };
   
-  const openHolidayModal = (hol = null) => {
-    if (hol) { setHolidayForm(hol); setIsEditingHoliday(true); } else { setHolidayForm({ id: `HOL-${Math.floor(Math.random() * 900) + 100}`, date: '', name: '' }); setIsEditingHoliday(false); }
+  const deleteStore = (id: string) => { 
+    showConfirm('Hapus Cabang Toko', 'Yakin ingin menghapus cabang toko beserta pengaturan GPS-nya?', () => setStores(stores.filter(st => st.id !== id))); 
+  };
+  
+  const openHolidayModal = (hol: any = null) => {
+    if (hol) { 
+      setHolidayForm(hol); 
+      setIsEditingHoliday(true); 
+    } else { 
+      setHolidayForm({ id: `HOL-${Math.floor(Math.random() * 900) + 100}`, date: '', name: '' }); 
+      setIsEditingHoliday(false); 
+    }
     setShowHolidayModal(true);
   };
-  const saveHoliday = (e) => {
+  
+  const saveHoliday = (e: any) => {
     e.preventDefault();
-    if (isEditingHoliday) { setHolidays(holidays.map(h => h.id === holidayForm.id ? holidayForm : h)); } else { setHolidays([...holidays, holidayForm]); }
+    if (isEditingHoliday) { 
+      setHolidays(holidays.map(h => h.id === holidayForm.id ? holidayForm : h)); 
+    } else { 
+      setHolidays([...holidays, holidayForm]); 
+    }
     setShowHolidayModal(false);
   };
-  const deleteHoliday = (id) => { showConfirm('Hapus Hari Libur', 'Yakin ingin menghapus hari libur ini?', () => setHolidays(holidays.filter(h => h.id !== id))); };
-  const exportReport = () => { showAlert('Berhasil Export', `✅ Laporan berhasil diekspor ke Excel!`); };
+  
+  const deleteHoliday = (id: string) => { 
+    showConfirm('Hapus Hari Libur', 'Yakin ingin menghapus hari libur ini?', () => setHolidays(holidays.filter(h => h.id !== id))); 
+  };
+  
+  const exportReport = () => { 
+    showAlert('Berhasil Export', `✅ Laporan berhasil diekspor ke Excel!`); 
+  };
 
-  const handleSendPayslipEmail = (email) => {
+  const handleSendPayslipEmail = (email: string) => {
     if (!email) {
       showAlert('Gagal Mengirim', 'Karyawan ini belum memiliki alamat email yang terdaftar. Silakan edit data karyawan terlebih dahulu.');
       return;
     }
-    
     setIsSendingEmail(true);
     setTimeout(() => {
       setIsSendingEmail(false);
@@ -423,7 +459,7 @@ export default function App() {
   // ==========================================
   const renderAdminPayroll = () => {
     const selectedEmp = employees.find(e => e.id === payrollConfig.empId);
-    let stats = { hadir: 0, lembur: 0, sakit: 0, izin: 0, alfa: Number(payrollConfig.manualAlfa) || 0 };
+    const stats = { hadir: 0, lembur: 0, sakit: 0, izin: 0, alfa: Number(payrollConfig.manualAlfa) || 0 };
 
     if (selectedEmp) {
       const empReports = reports.filter(r => r.empId === selectedEmp.id && r.status !== 'Libur Shift');
@@ -502,11 +538,11 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-4 pt-2">
                    <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Gaji Pokok (Rp)</label>
-                      <input type="number" value={payrollConfig.gajiPokok} onChange={(e) => setPayrollConfig({...payrollConfig, gajiPokok: e.target.value})} className={inputModernClass.replace('pl-10', 'pl-4')} />
+                      <input type="number" value={payrollConfig.gajiPokok || ''} onChange={(e) => setPayrollConfig({...payrollConfig, gajiPokok: Number(e.target.value) || 0})} className={inputModernClass.replace('pl-10', 'pl-4')} />
                    </div>
                    <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Tunjangan (Rp)</label>
-                      <input type="number" value={payrollConfig.tunjangan} onChange={(e) => setPayrollConfig({...payrollConfig, tunjangan: e.target.value})} className={inputModernClass.replace('pl-10', 'pl-4')} />
+                      <input type="number" value={payrollConfig.tunjangan || ''} onChange={(e) => setPayrollConfig({...payrollConfig, tunjangan: Number(e.target.value) || 0})} className={inputModernClass.replace('pl-10', 'pl-4')} />
                    </div>
                 </div>
                 
@@ -517,7 +553,7 @@ export default function App() {
 
                 <div className="pt-2 border-t border-gray-100 mt-4">
                    <label className="block text-xs font-medium text-gray-700 mb-1">Input Manual Jumlah Alfa (Mangkir)</label>
-                   <input type="number" value={payrollConfig.manualAlfa} onChange={(e) => setPayrollConfig({...payrollConfig, manualAlfa: e.target.value})} className={inputModernClass.replace('pl-10', 'pl-4')} />
+                   <input type="number" value={payrollConfig.manualAlfa || ''} onChange={(e) => setPayrollConfig({...payrollConfig, manualAlfa: Number(e.target.value) || 0})} className={inputModernClass.replace('pl-10', 'pl-4')} />
                    <p className="text-[10px] text-gray-400 mt-1">Diperlukan jika karyawan tidak absen sama sekali di sistem.</p>
                 </div>
               </div>
@@ -688,9 +724,9 @@ export default function App() {
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Halo, {user.name}! 👋</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Halo, {user?.name}! 👋</h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-gray-500 text-sm">{user.jobRole} - {user.storeName}</span>
+              <span className="text-gray-500 text-sm">{user?.jobRole} - {user?.storeName}</span>
               {selectedShift && (
                 <>
                   <span className="text-gray-300">|</span>
@@ -756,10 +792,10 @@ export default function App() {
               <div className={`flex flex-col items-center p-4 rounded-xl mb-8 w-full max-w-md border animate-in fade-in ${
                 locationError ? 'bg-red-50 border-red-100' :
                 distanceToStore === null ? 'bg-yellow-50 border-yellow-100' :
-                distanceToStore <= MAX_RADIUS ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'
+                (distanceToStore !== null && distanceToStore <= MAX_RADIUS) ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={20} className={locationError ? 'text-red-500' : distanceToStore <= MAX_RADIUS ? 'text-green-600' : 'text-orange-500'} />
+                  <MapPin size={20} className={locationError ? 'text-red-500' : (distanceToStore !== null && distanceToStore <= MAX_RADIUS) ? 'text-green-600' : 'text-orange-500'} />
                   <span className="font-semibold text-gray-800">Status Lokasi GPS</span>
                 </div>
                 
@@ -769,7 +805,7 @@ export default function App() {
                   <p className="text-sm text-yellow-600 text-center">Sedang mencari sinyal GPS...</p>
                 ) : (
                   <div className="text-center">
-                    <p className={`text-sm font-medium ${distanceToStore <= MAX_RADIUS ? 'text-green-700' : 'text-orange-700'}`}>
+                    <p className={`text-sm font-medium ${(distanceToStore !== null && distanceToStore <= MAX_RADIUS) ? 'text-green-700' : 'text-orange-700'}`}>
                       Jarak Anda: {distanceToStore} meter dari toko.
                     </p>
                     <p className="text-xs text-gray-500 mt-1">(Batas maksimal: {MAX_RADIUS} meter)</p>
@@ -799,12 +835,12 @@ export default function App() {
               ) : selectedShift ? (
                 <button 
                   onClick={() => handleClockAction('in')}
-                  disabled={distanceToStore > MAX_RADIUS || distanceToStore === null}
+                  disabled={(distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null}
                   className={`group relative px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all duration-200 transform flex items-center space-x-2 animate-in slide-in-from-bottom-4
-                    ${(distanceToStore > MAX_RADIUS || distanceToStore === null) 
+                    ${((distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null) 
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 active:scale-95 shadow-blue-500/30'}`}
                 >
-                  <Clock className={distanceToStore <= MAX_RADIUS ? "animate-pulse" : ""} size={24} />
+                  <Clock className={(distanceToStore !== null && distanceToStore <= MAX_RADIUS) ? "animate-pulse" : ""} size={24} />
                   <span>Clock In Sekarang</span>
                 </button>
               ) : (
@@ -813,9 +849,9 @@ export default function App() {
             ) : attendanceState === 'in' ? (
               <button 
                 onClick={() => handleClockAction('out')}
-                disabled={distanceToStore > MAX_RADIUS || distanceToStore === null}
+                disabled={(distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null}
                 className={`group relative px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all duration-200 transform flex items-center space-x-2 animate-in zoom-in
-                  ${(distanceToStore > MAX_RADIUS || distanceToStore === null) 
+                  ${((distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null) 
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-red-500 hover:bg-red-600 text-white hover:scale-105 active:scale-95 shadow-red-500/30'}`}
               >
                 <LogOut size={24} />
@@ -834,7 +870,7 @@ export default function App() {
   };
 
   const renderEmployeeHistory = () => {
-    const myHistory = reports.filter(r => r.empId === user.id);
+    const myHistory = reports.filter(r => r.empId === user?.id);
 
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
@@ -874,7 +910,7 @@ export default function App() {
                   </tr>
                 ))}
                 {myHistory.length === 0 && (
-                  <tr><td colSpan="4" className="p-8 text-center text-gray-500">Anda belum memiliki riwayat absensi.</td></tr>
+                  <tr><td colSpan={4} className="p-8 text-center text-gray-500">Anda belum memiliki riwayat absensi.</td></tr>
                 )}
               </tbody>
             </table>
@@ -900,7 +936,7 @@ export default function App() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Jenis Pengajuan</label>
               <div className="relative group">
-                <select value={leaveForm.type} onChange={(e) => setLeaveForm({...leaveForm, type: e.target.value, attachment: null})} required className={selectModernClass.replace('pl-10', 'pl-4')}>
+                <select value={leaveForm.type} onChange={(e: any) => setLeaveForm({...leaveForm, type: e.target.value, attachment: null})} required className={selectModernClass.replace('pl-10', 'pl-4')}>
                   <option value="Sakit">Sakit</option>
                   <option value="Izin">Izin (Keperluan Pribadi)</option>
                   <option value="Cuti Tahunan">Cuti Tahunan</option>
@@ -935,31 +971,31 @@ export default function App() {
             )}
 
             {leaveForm.type === 'Lembur' ? (
-              <>
+              <div className="space-y-4 border-t border-gray-100 pt-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Lembur</label>
-                  <input type="date" value={leaveForm.startDate} onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
+                  <input type="date" value={leaveForm.startDate} onChange={(e: any) => setLeaveForm({...leaveForm, startDate: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Jam & Keterangan Kerja</label>
-                  <textarea value={leaveForm.reason} onChange={(e) => setLeaveForm({...leaveForm, reason: e.target.value})} required rows="3" className={`${inputModernClass.replace('pl-10', 'pl-4')} resize-none`} placeholder="Contoh: 15:30 - 18:30, Lembur stok opname akhir bulan..." />
+                  <textarea value={leaveForm.reason} onChange={(e: any) => setLeaveForm({...leaveForm, reason: e.target.value})} required rows={3} className={`${inputModernClass.replace('pl-10', 'pl-4')} resize-none`} placeholder="Contoh: 15:30 - 18:30, Lembur stok opname akhir bulan..." />
                 </div>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-4 border-t border-gray-100 pt-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Mulai Tanggal</label>
-                  <input type="date" value={leaveForm.startDate} onChange={(e) => setLeaveForm({...leaveForm, startDate: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
+                  <input type="date" value={leaveForm.startDate} onChange={(e: any) => setLeaveForm({...leaveForm, startDate: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Sampai Tanggal</label>
-                  <input type="date" value={leaveForm.endDate} onChange={(e) => setLeaveForm({...leaveForm, endDate: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
+                  <input type="date" value={leaveForm.endDate} onChange={(e: any) => setLeaveForm({...leaveForm, endDate: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Alasan Lengkap</label>
-                  <textarea value={leaveForm.reason} onChange={(e) => setLeaveForm({...leaveForm, reason: e.target.value})} required rows="3" className={`${inputModernClass.replace('pl-10', 'pl-4')} resize-none`} placeholder="Tuliskan keterangan lengkap..." />
+                  <textarea value={leaveForm.reason} onChange={(e: any) => setLeaveForm({...leaveForm, reason: e.target.value})} required rows={3} className={`${inputModernClass.replace('pl-10', 'pl-4')} resize-none`} placeholder="Tuliskan keterangan lengkap..." />
                 </div>
-              </>
+              </div>
             )}
 
             <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-blue-500/30 flex justify-center items-center gap-2 mt-2">
@@ -983,12 +1019,20 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {leaveRequests.filter(req => req.empId === user.id).map((req) => (
+                {leaveRequests.filter(req => req.empId === user?.id).map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 text-sm font-bold text-gray-800">
                       <span className={req.type === 'Lembur' ? 'text-blue-600' : 'text-gray-800'}>{req.type}</span>
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{req.startDate} {req.type !== 'Lembur' && req.startDate !== req.endDate ? ` s/d ${req.endDate}` : ''}</td>
+                    <td className="p-4 text-sm text-gray-600">
+                      {req.startDate} 
+                      {req.type !== 'Lembur' && req.startDate !== req.endDate && (
+                        <span>
+                          <br/>
+                          <span className="text-xs text-gray-400">s/d</span> {req.endDate}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-4 text-sm text-gray-600 max-w-[200px] truncate" title={req.reason}>{req.reason}</td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -1000,8 +1044,8 @@ export default function App() {
                     </td>
                   </tr>
                 ))}
-                {leaveRequests.filter(req => req.empId === user.id).length === 0 && (
-                  <tr><td colSpan="4" className="p-8 text-center text-gray-500">Belum ada riwayat pengajuan.</td></tr>
+                {leaveRequests.filter(req => req.empId === user?.id).length === 0 && (
+                  <tr><td colSpan={4} className="p-8 text-center text-gray-500">Belum ada riwayat pengajuan.</td></tr>
                 )}
               </tbody>
             </table>
@@ -1101,7 +1145,7 @@ export default function App() {
               <input 
                 type="text" 
                 value={newRole} 
-                onChange={(e) => setNewRole(e.target.value)} 
+                onChange={(e: any) => setNewRole(e.target.value)} 
                 required 
                 className={inputModernClass.replace('pl-10', 'pl-4')}
                 placeholder="Contoh: IT Support" 
@@ -1164,7 +1208,7 @@ export default function App() {
               type="text" 
               placeholder="Cari ID atau Nama..." 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: any) => setSearchQuery(e.target.value)}
               className={inputModernClass}
             />
           </div>
@@ -1204,7 +1248,7 @@ export default function App() {
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan="5" className="p-8 text-center text-gray-500">Karyawan tidak ditemukan.</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-gray-500">Karyawan tidak ditemukan.</td></tr>
               )}
             </tbody>
           </table>
@@ -1240,7 +1284,7 @@ export default function App() {
                 type="date" 
                 className={inputModernClass}
                 value={reportFilterDate}
-                onChange={(e) => setReportFilterDate(e.target.value)}
+                onChange={(e: any) => setReportFilterDate(e.target.value)}
               />
             </div>
             <div className="relative w-full sm:w-auto group">
@@ -1250,7 +1294,7 @@ export default function App() {
               <select 
                 className={selectModernClass}
                 value={reportFilterStore}
-                onChange={(e) => setReportFilterStore(e.target.value)}
+                onChange={(e: any) => setReportFilterStore(e.target.value)}
               >
                 <option value="Semua Toko">Semua Cabang Toko</option>
                 {stores.map(st => <option key={st.id} value={st.name}>{st.name}</option>)}
@@ -1292,7 +1336,7 @@ export default function App() {
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Tidak ada laporan absensi untuk filter ini.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-gray-500">Tidak ada laporan absensi untuk filter ini.</td></tr>
               )}
             </tbody>
           </table>
@@ -1332,7 +1376,15 @@ export default function App() {
                     <p className="text-xs text-gray-500 font-mono">{req.empId}</p>
                   </td>
                   <td className="p-4 text-sm font-bold text-blue-700">{req.type}</td>
-                  <td className="p-4 text-sm text-gray-600">{req.startDate} {req.type !== 'Lembur' && req.startDate !== req.endDate ? <><br/><span className="text-xs text-gray-400">s/d</span> {req.endDate}</> : ''}</td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {req.startDate} 
+                    {req.type !== 'Lembur' && req.startDate !== req.endDate && (
+                      <span>
+                        <br/>
+                        <span className="text-xs text-gray-400">s/d</span> {req.endDate}
+                      </span>
+                    )}
+                  </td>
                   <td className="p-4 text-sm text-gray-600">
                     <p className="line-clamp-2" title={req.reason}>{req.reason}</p>
                   </td>
@@ -1374,7 +1426,7 @@ export default function App() {
                 </tr>
               ))}
               {leaveRequests.length === 0 && (
-                <tr><td colSpan="7" className="p-8 text-center text-gray-500">Tidak ada permohonan pengajuan saat ini.</td></tr>
+                <tr><td colSpan={7} className="p-8 text-center text-gray-500">Tidak ada permohonan pengajuan saat ini.</td></tr>
               )}
             </tbody>
           </table>
@@ -1465,7 +1517,7 @@ export default function App() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {holidays.sort((a,b) => new Date(a.date) - new Date(b.date)).map((hol) => (
+              {holidays.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((hol) => (
                 <tr key={hol.id} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4 text-sm font-bold text-indigo-600">
                     {new Date(hol.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -1480,7 +1532,7 @@ export default function App() {
                 </tr>
               ))}
               {holidays.length === 0 && (
-                <tr><td colSpan="3" className="p-8 text-center text-gray-500">Belum ada hari libur yang diatur.</td></tr>
+                <tr><td colSpan={3} className="p-8 text-center text-gray-500">Belum ada hari libur yang diatur.</td></tr>
               )}
             </tbody>
           </table>
@@ -1556,11 +1608,11 @@ export default function App() {
         <div className="p-4 border-t border-gray-100">
           <button onClick={handleLogout} className="flex items-center space-x-3 w-full p-2 hover:bg-red-50 rounded-lg transition-colors group">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold group-hover:bg-red-200 transition-colors">
-              {user.name.charAt(0)}
+              {user?.name?.charAt(0)}
             </div>
             <div className="text-left flex-1">
-              <p className="text-sm font-bold text-gray-800 group-hover:text-red-600 transition-colors">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.id}</p>
+              <p className="text-sm font-bold text-gray-800 group-hover:text-red-600 transition-colors">{user?.name}</p>
+              <p className="text-xs text-gray-500">{user?.id}</p>
             </div>
             <LogOut size={18} className="text-gray-400 group-hover:text-red-600 transition-colors" />
           </button>
@@ -1626,13 +1678,13 @@ export default function App() {
                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                      <User className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                    </div>
-                   <input type="text" value={empForm.id} onChange={(e) => setEmpForm({...empForm, id: e.target.value})} required disabled={isEditingEmp} className={`${inputModernClass} uppercase placeholder-gray-400 ${isEditingEmp ? 'bg-gray-100 text-gray-500 cursor-not-allowed shadow-none' : ''}`} placeholder="Contoh: EMP-004" />
+                   <input type="text" value={empForm.id} onChange={(e: any) => setEmpForm({...empForm, id: e.target.value})} required disabled={isEditingEmp} className={`${inputModernClass} uppercase placeholder-gray-400 ${isEditingEmp ? 'bg-gray-100 text-gray-500 cursor-not-allowed shadow-none' : ''}`} placeholder="Contoh: EMP-004" />
                 </div>
                 {isEditingEmp && <p className="text-xs text-orange-500 mt-1 flex items-center gap-1"><AlertCircle size={12}/> ID Karyawan bersifat permanen.</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                <input type="text" value={empForm.name} onChange={(e) => setEmpForm({...empForm, name: e.target.value})} required className={inputModernClass} placeholder="Masukkan nama lengkap..." />
+                <input type="text" value={empForm.name} onChange={(e: any) => setEmpForm({...empForm, name: e.target.value})} required className={inputModernClass} placeholder="Masukkan nama lengkap..." />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Email</label>
@@ -1640,7 +1692,7 @@ export default function App() {
                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                      <Mail className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                    </div>
-                   <input type="email" value={empForm.email || ''} onChange={(e) => setEmpForm({...empForm, email: e.target.value})} className={inputModernClass} placeholder="Contoh: email@perusahaan.com" />
+                   <input type="email" value={empForm.email || ''} onChange={(e: any) => setEmpForm({...empForm, email: e.target.value})} className={inputModernClass} placeholder="Contoh: email@perusahaan.com" />
                 </div>
               </div>
               <div>
@@ -1649,7 +1701,7 @@ export default function App() {
                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                      <Lock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                    </div>
-                   <input type="text" value={empForm.pin || ''} onChange={(e) => setEmpForm({...empForm, pin: e.target.value})} required className={inputModernClass} placeholder="Contoh: 1234" />
+                   <input type="text" value={empForm.pin || ''} onChange={(e: any) => setEmpForm({...empForm, pin: e.target.value})} required className={inputModernClass} placeholder="Contoh: 1234" />
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Gunakan kombinasi angka atau huruf yang mudah diingat.</p>
               </div>
@@ -1657,7 +1709,7 @@ export default function App() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Pilih Jabatan</label>
                   <div className="relative group">
-                    <select value={empForm.role} onChange={(e) => setEmpForm({...empForm, role: e.target.value})} required className={`${selectModernClass} pr-6`}>
+                    <select value={empForm.role} onChange={(e: any) => setEmpForm({...empForm, role: e.target.value})} required className={`${selectModernClass} pr-6`}>
                       <option value="" disabled>Pilih...</option>
                       {roles.map((r, i) => <option key={i} value={r}>{r}</option>)}
                     </select>
@@ -1669,7 +1721,7 @@ export default function App() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Penempatan</label>
                   <div className="relative group">
-                    <select value={empForm.store} onChange={(e) => setEmpForm({...empForm, store: e.target.value})} className={`${selectModernClass} pr-6`}>
+                    <select value={empForm.store} onChange={(e: any) => setEmpForm({...empForm, store: e.target.value})} className={`${selectModernClass} pr-6`}>
                       {stores.map(st => <option key={st.id} value={st.name}>{st.name}</option>)}
                     </select>
                     <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
@@ -1702,21 +1754,21 @@ export default function App() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Cabang / Toko</label>
-                <input type="text" value={storeForm.name} onChange={(e) => setStoreForm({...storeForm, name: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} placeholder="Contoh: Cabang Bekasi" />
+                <input type="text" value={storeForm.name} onChange={(e: any) => setStoreForm({...storeForm, name: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} placeholder="Contoh: Cabang Bekasi" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Latitude</label>
-                  <input type="text" value={storeForm.lat} onChange={(e) => setStoreForm({...storeForm, lat: e.target.value})} required className={`${inputModernClass.replace('pl-10', 'pl-4')} font-mono text-sm`} placeholder="-6.12345" />
+                  <input type="text" value={storeForm.lat} onChange={(e: any) => setStoreForm({...storeForm, lat: e.target.value})} required className={`${inputModernClass.replace('pl-10', 'pl-4')} font-mono text-sm`} placeholder="-6.12345" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Longitude</label>
-                  <input type="text" value={storeForm.lng} onChange={(e) => setStoreForm({...storeForm, lng: e.target.value})} required className={`${inputModernClass.replace('pl-10', 'pl-4')} font-mono text-sm`} placeholder="106.12345" />
+                  <input type="text" value={storeForm.lng} onChange={(e: any) => setStoreForm({...storeForm, lng: e.target.value})} required className={`${inputModernClass.replace('pl-10', 'pl-4')} font-mono text-sm`} placeholder="106.12345" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Batas Radius Absen (Meter)</label>
-                <input type="number" value={storeForm.radius} onChange={(e) => setStoreForm({...storeForm, radius: Number(e.target.value)})} required className={inputModernClass.replace('pl-10', 'pl-4')} min="10" />
+                <input type="number" value={storeForm.radius} onChange={(e: any) => setStoreForm({...storeForm, radius: Number(e.target.value)})} required className={inputModernClass.replace('pl-10', 'pl-4')} min={10} />
               </div>
               <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onClick={() => setShowStoreModal(false)} className="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-medium transition-colors shadow-sm">Batal</button>
@@ -1738,11 +1790,11 @@ export default function App() {
             <form onSubmit={saveHoliday} className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Libur</label>
-                <input type="date" value={holidayForm.date} onChange={(e) => setHolidayForm({...holidayForm, date: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
+                <input type="date" value={holidayForm.date} onChange={(e: any) => setHolidayForm({...holidayForm, date: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Keterangan / Nama Libur</label>
-                <input type="text" value={holidayForm.name} onChange={(e) => setHolidayForm({...holidayForm, name: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} placeholder="Contoh: Idul Fitri, Hari Buruh..." />
+                <input type="text" value={holidayForm.name} onChange={(e: any) => setHolidayForm({...holidayForm, name: e.target.value})} required className={inputModernClass.replace('pl-10', 'pl-4')} placeholder="Contoh: Idul Fitri, Hari Buruh..." />
               </div>
               <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onClick={() => setShowHolidayModal(false)} className="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-medium transition-colors shadow-sm">Batal</button>
@@ -1770,7 +1822,9 @@ export default function App() {
               )}
               <button 
                 onClick={() => {
-                  if (dialog.type === 'confirm' && dialog.onConfirm) dialog.onConfirm();
+                  if (dialog.type === 'confirm' && dialog.onConfirm) {
+                    (dialog.onConfirm as Function)();
+                  }
                   closeDialog();
                 }} 
                 className={`flex-1 py-3 text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98] ${dialog.type === 'confirm' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'}`}
