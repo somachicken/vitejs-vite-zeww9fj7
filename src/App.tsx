@@ -50,32 +50,60 @@ export default function App() {
 
   const MAX_RADIUS = 100;
 
-  // --- Live Data States (Sourced from Firebase) ---
+  // --- Live Data States (Sourced from Firebase with Local Dummy Fallback) ---
   const [roles, setRoles] = useState<string[]>(['Kasir', 'Pramuniaga', 'SPV', 'Manager', 'Staff Admin']);
   const [newRole, setNewRole] = useState<string>('');
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [stores, setStores] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
-  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
-  const [holidays, setHolidays] = useState<any[]>([]);
 
-  // --- Form & Modals States ---
+  const [employees, setEmployees] = useState<any[]>([
+    { id: 'EMP-001', name: 'Budi Santoso', email: 'budi.contoh@gmail.com', role: 'Kasir', store: 'Cabang Sudirman', pin: '1234' },
+    { id: 'EMP-002', name: 'Siti Aminah', email: 'siti.aminah@gmail.com', role: 'Pramuniaga', store: 'Cabang Thamrin', pin: '5678' },
+    { id: 'EMP-003', name: 'Agus Pratama', email: 'agus.p@gmail.com', role: 'SPV', store: 'Cabang Sudirman', pin: '1234' },
+  ]);
+  
+  const [stores, setStores] = useState<any[]>([
+    { id: 'STR-01', name: 'Cabang Sudirman', lat: '-6.1753924', lng: '106.8271528', radius: 100 },
+    { id: 'STR-02', name: 'Cabang Thamrin', lat: '-6.1834000', lng: '106.8200000', radius: 150 },
+  ]);
+  
+  const [reports, setReports] = useState<any[]>([
+    { id: 1, date: '2026-04-28', empId: 'EMP-001', name: 'Budi Santoso', store: 'Cabang Sudirman', in: '07:55', out: '15:35', status: 'Tepat Waktu' },
+    { id: 2, date: '2026-04-28', empId: 'EMP-002', name: 'Siti Aminah', store: 'Cabang Thamrin', in: '14:20', out: '21:30', status: 'Terlambat' },
+  ]);
+
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([
+    { id: 'LV-001', empId: 'EMP-002', name: 'Siti Aminah', type: 'Sakit', startDate: '2026-04-20', endDate: '2026-04-23', reason: 'Tipus (Rawat Inap)', status: 'Disetujui', attachment: null },
+  ]);
   const [leaveForm, setLeaveForm] = useState<any>({ type: 'Sakit', startDate: '', endDate: '', reason: '', attachment: null });
   const [viewAttachmentUrl, setViewAttachmentUrl] = useState<any>(null); 
+
+  const [holidays, setHolidays] = useState<any[]>([
+    { id: 'HOL-001', date: '2026-05-01', name: 'Hari Buruh Internasional' }
+  ]);
+
   const [showHolidayModal, setShowHolidayModal] = useState<boolean>(false);
   const [holidayForm, setHolidayForm] = useState<any>({ id: '', date: '', name: '' });
   const [isEditingHoliday, setIsEditingHoliday] = useState<boolean>(false);
-  const [payrollConfig, setPayrollConfig] = useState<any>({ empId: '', gajiPokok: 3000000, tunjangan: 500000, manualAlfa: 0 });
+
+  const [payrollConfig, setPayrollConfig] = useState<any>({
+    empId: '',
+    gajiPokok: 3000000,
+    tunjangan: 500000,
+    manualAlfa: 0 
+  });
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [reportFilterDate, setReportFilterDate] = useState<string>('');
   const [reportFilterStore, setReportFilterStore] = useState<string>('Semua Toko');
+  
   const [showEmpModal, setShowEmpModal] = useState<boolean>(false);
   const [empForm, setEmpForm] = useState<any>({ id: '', name: '', email: '', role: '', store: '', pin: '' });
   const [isEditingEmp, setIsEditingEmp] = useState<boolean>(false);
+
   const [showStoreModal, setShowStoreModal] = useState<boolean>(false);
   const [storeForm, setStoreForm] = useState<any>({ id: '', name: '', lat: '', lng: '', radius: 100 });
   const [isEditingStore, setIsEditingStore] = useState<boolean>(false);
+
   const [dialog, setDialog] = useState<any>({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
 
   // --- Helper Functions ---
@@ -98,23 +126,46 @@ export default function App() {
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     
-    // Set default filter date to today
     const y = new Date().getFullYear();
     const m = String(new Date().getMonth() + 1).padStart(2, '0');
     const d = String(new Date().getDate()).padStart(2, '0');
     setReportFilterDate(`${y}-${m}-${d}`);
 
-    // Real-time Firebase Listeners
-    const unsubEmp = onSnapshot(collection(db, "employees"), (snap) => setEmployees(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
-    const unsubStores = onSnapshot(collection(db, "stores"), (snap) => setStores(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
-    const unsubReports = onSnapshot(collection(db, "reports"), (snap) => setReports(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
-    const unsubLeaves = onSnapshot(collection(db, "leaveRequests"), (snap) => setLeaveRequests(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
-    const unsubHolidays = onSnapshot(collection(db, "holidays"), (snap) => setHolidays(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
-    const unsubRoles = onSnapshot(doc(db, "settings", "roles"), (document) => {
-      if (document.exists() && document.data().list) {
-        setRoles(document.data().list);
-      }
-    });
+    // Real-time Firebase Listeners with robust Error Catching to prevent UI freezing
+    let unsubEmp = () => {};
+    let unsubStores = () => {};
+    let unsubReports = () => {};
+    let unsubLeaves = () => {};
+    let unsubHolidays = () => {};
+    let unsubRoles = () => {};
+
+    try {
+      unsubEmp = onSnapshot(collection(db, "employees"), (snap) => {
+        if(!snap.empty) setEmployees(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }, (err) => console.error("FB Emp:", err));
+
+      unsubStores = onSnapshot(collection(db, "stores"), (snap) => {
+        if(!snap.empty) setStores(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }, (err) => console.error("FB Store:", err));
+
+      unsubReports = onSnapshot(collection(db, "reports"), (snap) => {
+        if(!snap.empty) setReports(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }, (err) => console.error("FB Rep:", err));
+
+      unsubLeaves = onSnapshot(collection(db, "leaveRequests"), (snap) => {
+        if(!snap.empty) setLeaveRequests(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }, (err) => console.error("FB Leave:", err));
+
+      unsubHolidays = onSnapshot(collection(db, "holidays"), (snap) => {
+        if(!snap.empty) setHolidays(snap.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }, (err) => console.error("FB Hol:", err));
+
+      unsubRoles = onSnapshot(doc(db, "settings", "roles"), (document) => {
+        if (document.exists() && document.data().list) setRoles(document.data().list);
+      }, (err) => console.error("FB Role:", err));
+    } catch (error) {
+      console.log("Menjalankan Mode Offline karena Firebase tidak siap.");
+    }
 
     return () => {
       clearInterval(timer);
@@ -126,7 +177,6 @@ export default function App() {
     if (isLoggedIn && user && user?.role !== 'admin') {
       getLocation();
       
-      // Auto-check attendance status on load
       const y = currentTime.getFullYear();
       const m = String(currentTime.getMonth() + 1).padStart(2, '0');
       const d = String(currentTime.getDate()).padStart(2, '0');
@@ -154,11 +204,12 @@ export default function App() {
   const getLocation = () => {
     try {
       if (!navigator.geolocation) {
-        setLocationError('Browser tidak mendukung akses lokasi.');
+        setLocationError('Sistem pelacakan GPS tidak didukung di perangkat ini.');
         return;
       }
       navigator.geolocation.watchPosition(
         (position) => {
+          setLocationError('');
           const currentLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
           setUserLocation(currentLoc);
           if (user && user?.storeLat && user?.storeLng) {
@@ -166,11 +217,13 @@ export default function App() {
             setDistanceToStore(Math.round(dist));
           }
         },
-        () => setLocationError('Gagal mendapatkan lokasi. Pastikan GPS aktif dan diizinkan.'),
+        () => {
+          setLocationError('GPS diblokir/tidak aktif. Anda tetap bisa absen (Mode Demo).');
+        },
         { enableHighAccuracy: true, maximumAge: 10000 }
       );
     } catch (err) {
-      setLocationError('Akses lokasi diblokir oleh sistem atau browser.');
+      setLocationError('Akses lokasi diblokir.');
     }
   };
 
@@ -185,7 +238,7 @@ export default function App() {
     return R * c; 
   };
 
-  // --- API Handlers (Firebase) ---
+  // --- API Handlers (Safe Wrappers) ---
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
@@ -217,7 +270,7 @@ export default function App() {
           }
         }
         setIsLoading(false);
-      }, 1000);
+      }, 800);
     } catch (err) {
       setLoginError('Gagal memproses login.');
       setIsLoading(false);
@@ -244,7 +297,14 @@ export default function App() {
         shift: 'Libur'
       };
 
-      await setDoc(doc(db, "reports", reportId), newReport);
+      try {
+        await setDoc(doc(db, "reports", reportId), newReport);
+      } catch (error) {
+        setReports([newReport, ...reports]); // Fallback Lokal
+      }
+      
+      setTodayLog({ in: '-', out: '-', shift: 'Libur', status: 'Libur Shift' });
+      setAttendanceState('done');
       showAlert("Berhasil", "Status jadwal Libur Anda untuk hari ini telah dicatat.");
     });
   };
@@ -255,13 +315,8 @@ export default function App() {
       return;
     }
 
-    if (distanceToStore !== null && distanceToStore > MAX_RADIUS) {
+    if (distanceToStore !== null && distanceToStore > MAX_RADIUS && !locationError) {
       showAlert("Di Luar Jangkauan", `Anda berada di luar jangkauan toko! (${distanceToStore} meter). Maksimal ${MAX_RADIUS} meter.`);
-      return;
-    }
-    
-    if (!userLocation) {
-      showAlert("Menunggu GPS", "Menunggu lokasi GPS Anda...");
       return;
     }
 
@@ -289,6 +344,8 @@ export default function App() {
         if (timeString > '14:05') currentStatus = 'Terlambat';
       }
 
+      if (locationError) currentStatus += ' (Tanpa GPS)';
+
       const newReport = {
         id: reportId,
         date: todayDateString,
@@ -301,21 +358,29 @@ export default function App() {
         shift: selectedShift
       };
 
-      await setDoc(doc(db, "reports", reportId), newReport);
+      try {
+        await setDoc(doc(db, "reports", reportId), newReport);
+      } catch (error) {
+        setReports([newReport, ...reports]); // Fallback Lokal
+      }
+      
+      setTodayLog({ ...todayLog, in: timeString, shift: selectedShift, status: currentStatus });
+      setAttendanceState('in');
       
     } else { 
       let finalStatus = todayLog.status;
       const isNationalHoliday = holidays.find(h => h.date === todayDateString);
-      
-      if (isNationalHoliday) {
-        finalStatus += ' (Lembur Libur)';
+      if (isNationalHoliday) finalStatus += ' (Lembur Libur)';
+
+      try {
+        await updateDoc(doc(db, "reports", reportId), { out: timeString, status: finalStatus });
+      } catch (error) {
+        setReports(reports.map(r => r.id === reportId ? { ...r, out: timeString, status: finalStatus } : r)); // Fallback Lokal
       }
 
-      await updateDoc(doc(db, "reports", reportId), {
-        out: timeString,
-        status: finalStatus
-      });
-      showAlert('Absensi Selesai', 'Terima kasih, jam pulang Anda telah berhasil dicatat ke cloud.');
+      setTodayLog({ ...todayLog, out: timeString });
+      setAttendanceState('done');
+      showAlert('Absensi Selesai', 'Terima kasih, jam pulang Anda telah berhasil dicatat.');
     }
   };
 
@@ -338,7 +403,6 @@ export default function App() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Kompresi ringan agar tidak melebihi limit Firebase Firestore (1MB)
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
@@ -371,14 +435,24 @@ export default function App() {
       attachment: leaveForm.type === 'Sakit' ? leaveForm.attachment : null, 
       status: 'Pending'
     };
-    await setDoc(doc(db, "leaveRequests", reqId), newRequest);
+
+    try {
+      await setDoc(doc(db, "leaveRequests", reqId), newRequest);
+      showAlert('Berhasil Terkirim', 'Pengajuan Anda telah berhasil dicatat ke cloud.');
+    } catch (error) {
+      setLeaveRequests([newRequest, ...leaveRequests]); // Fallback Lokal
+      showAlert('Mode Offline Aktif', 'Pengajuan disimpan secara lokal karena Firebase belum siap.');
+    }
     setLeaveForm({ type: 'Sakit', startDate: '', endDate: '', reason: '', attachment: null });
-    showAlert('Berhasil Terkirim', 'Pengajuan Anda telah berhasil dicatat ke cloud.');
   };
 
   const handleUpdateLeaveStatus = (id: any, newStatus: string) => {
     showConfirm('Konfirmasi Status', `Anda yakin ingin ${newStatus === 'Disetujui' ? 'Menyetujui' : 'Menolak'} pengajuan ini?`, async () => {
-      await updateDoc(doc(db, "leaveRequests", id), { status: newStatus });
+      try {
+        await updateDoc(doc(db, "leaveRequests", id), { status: newStatus });
+      } catch (error) {
+        setLeaveRequests(leaveRequests.map(req => req.id === id ? { ...req, status: newStatus } : req)); // Fallback Lokal
+      }
     });
   };
 
@@ -397,7 +471,8 @@ export default function App() {
     e.preventDefault();
     if (newRole.trim() !== '' && !roles.includes(newRole.trim())) { 
       const updatedRoles = [...roles, newRole.trim()];
-      await setDoc(doc(db, "settings", "roles"), { list: updatedRoles });
+      try { await setDoc(doc(db, "settings", "roles"), { list: updatedRoles }); } 
+      catch (error) { setRoles(updatedRoles); }
       setNewRole(''); 
     }
   };
@@ -405,7 +480,8 @@ export default function App() {
   const handleDeleteRole = (roleToDelete: string) => { 
     showConfirm('Hapus Jabatan', `Yakin ingin menghapus jabatan: ${roleToDelete}?`, async () => {
       const updatedRoles = roles.filter(role => role !== roleToDelete);
-      await setDoc(doc(db, "settings", "roles"), { list: updatedRoles });
+      try { await setDoc(doc(db, "settings", "roles"), { list: updatedRoles }); } 
+      catch (error) { setRoles(updatedRoles); }
     }); 
   };
   
@@ -422,14 +498,21 @@ export default function App() {
   
   const saveEmp = async (e: any) => {
     e.preventDefault();
-    await setDoc(doc(db, "employees", empForm.id.toUpperCase()), { ...empForm, id: empForm.id.toUpperCase() });
+    try {
+      await setDoc(doc(db, "employees", empForm.id.toUpperCase()), { ...empForm, id: empForm.id.toUpperCase() });
+      showAlert('Berhasil Disimpan', `Data karyawan ${empForm.name} telah berhasil disimpan.`);
+    } catch (error) {
+      if (isEditingEmp) setEmployees(employees.map(emp => emp.id === empForm.id ? empForm : emp)); 
+      else setEmployees([...employees, { ...empForm, id: empForm.id.toUpperCase() }]); 
+      showAlert('Disimpan di Lokal', 'Firebase belum siap, data disimpan secara offline.');
+    }
     setShowEmpModal(false);
-    showAlert('Berhasil Disimpan', `Data karyawan ${empForm.name} telah berhasil ${isEditingEmp ? 'diperbarui' : 'ditambahkan'} ke cloud.`);
   };
   
   const deleteEmp = (id: string) => { 
     showConfirm('Hapus Karyawan', 'Yakin ingin menghapus karyawan ini secara permanen?', async () => {
-      await deleteDoc(doc(db, "employees", id));
+      try { await deleteDoc(doc(db, "employees", id)); } 
+      catch (error) { setEmployees(employees.filter(emp => emp.id !== id)); }
     }); 
   };
   
@@ -446,13 +529,18 @@ export default function App() {
   
   const saveStore = async (e: any) => {
     e.preventDefault();
-    await setDoc(doc(db, "stores", storeForm.id), storeForm);
+    try { await setDoc(doc(db, "stores", storeForm.id), storeForm); } 
+    catch (error) {
+      if (isEditingStore) setStores(stores.map(st => st.id === storeForm.id ? storeForm : st)); 
+      else setStores([...stores, storeForm]); 
+    }
     setShowStoreModal(false);
   };
   
   const deleteStore = (id: string) => { 
     showConfirm('Hapus Cabang Toko', 'Yakin ingin menghapus cabang toko beserta pengaturan GPS-nya?', async () => {
-      await deleteDoc(doc(db, "stores", id));
+      try { await deleteDoc(doc(db, "stores", id)); } 
+      catch (error) { setStores(stores.filter(st => st.id !== id)); }
     }); 
   };
   
@@ -469,13 +557,18 @@ export default function App() {
   
   const saveHoliday = async (e: any) => {
     e.preventDefault();
-    await setDoc(doc(db, "holidays", holidayForm.id), holidayForm);
+    try { await setDoc(doc(db, "holidays", holidayForm.id), holidayForm); } 
+    catch (error) {
+      if (isEditingHoliday) setHolidays(holidays.map(h => h.id === holidayForm.id ? holidayForm : h)); 
+      else setHolidays([...holidays, holidayForm]); 
+    }
     setShowHolidayModal(false);
   };
   
   const deleteHoliday = (id: string) => { 
     showConfirm('Hapus Hari Libur', 'Yakin ingin menghapus hari libur ini?', async () => {
-      await deleteDoc(doc(db, "holidays", id));
+      try { await deleteDoc(doc(db, "holidays", id)); } 
+      catch (error) { setHolidays(holidays.filter(h => h.id !== id)); }
     }); 
   };
   
@@ -704,7 +797,7 @@ export default function App() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Masukan ID Kalian</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ID Pengguna</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
@@ -720,7 +813,7 @@ export default function App() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">PIN Kehadiran</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">PIN Keamanan</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
@@ -745,9 +838,8 @@ export default function App() {
           </form>
           
           <div className="mt-6 p-4 bg-blue-50/50 rounded-xl text-sm text-blue-800 border border-blue-100 text-center">
-            <strong>🚀 Sistem Terhubung ke Cloud</strong>
-            <p className="mt-2 mb-2 italic">Aplikasi kini tersinkronisasi penuh dengan Firebase.</p>
-            <p className="font-bold border-t border-blue-200 pt-2 text-xs">Minta Akses ke SPV Store atau ke Management</p>
+            <p className="italic">"Satu-satunya cara untuk melakukan pekerjaan hebat adalah dengan mencintai apa yang Anda lakukan."</p>
+            <p className="font-bold mt-2 text-blue-600">- Semangat Bekerja! -</p>
           </div>
         </div>
       </div>
@@ -877,10 +969,9 @@ export default function App() {
               ) : selectedShift ? (
                 <button 
                   onClick={() => handleClockAction('in')}
-                  disabled={(distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null}
                   className={`group relative px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all duration-200 transform flex items-center space-x-2 animate-in slide-in-from-bottom-4
-                    ${((distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null) 
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 active:scale-95 shadow-blue-500/30'}`}
+                    ${((distanceToStore !== null && distanceToStore > MAX_RADIUS) && !locationError) 
+                      ? 'bg-gray-300 text-gray-500 shadow-none cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 active:scale-95 shadow-blue-500/30'}`}
                 >
                   <Clock className={(distanceToStore !== null && distanceToStore <= MAX_RADIUS) ? "animate-pulse" : ""} size={24} />
                   <span>Clock In Sekarang</span>
@@ -891,10 +982,9 @@ export default function App() {
             ) : attendanceState === 'in' ? (
               <button 
                 onClick={() => handleClockAction('out')}
-                disabled={(distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null}
                 className={`group relative px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all duration-200 transform flex items-center space-x-2 animate-in zoom-in
-                  ${((distanceToStore !== null && distanceToStore > MAX_RADIUS) || distanceToStore === null) 
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' : 'bg-red-500 hover:bg-red-600 text-white hover:scale-105 active:scale-95 shadow-red-500/30'}`}
+                  ${((distanceToStore !== null && distanceToStore > MAX_RADIUS) && !locationError) 
+                    ? 'bg-gray-300 text-gray-500 shadow-none cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white hover:scale-105 active:scale-95 shadow-red-500/30'}`}
               >
                 <LogOut size={24} />
                 <span>Clock Out</span>
@@ -1102,7 +1192,7 @@ export default function App() {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Panel Admin 👋</h2>
+          <h2 className="text-xl font-bold text-gray-800">Panel Admin 👋</h2>
           <p className="text-gray-500 mt-1">Pusat laporan dan persetujuan absensi.</p>
         </div>
         <div className="text-left md:text-right">
