@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// @ts-nocheck
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, MapPin, User, LogOut, Home, 
   Briefcase, CheckCircle, Menu, X, FileText, 
@@ -6,8 +7,25 @@ import {
   Users, Settings, Database, Plus, Edit, Trash2, Search, Save,
   ChevronDown, Filter, Calendar, Tag, CalendarDays, Check,
   Image as ImageIcon, Palmtree, History, Sun, Moon,
-  WalletCards, Receipt, Mail 
+  WalletCards, Receipt, Mail
 } from 'lucide-react';
+
+// --- INTEGRASI FIREBASE CLOUD ---
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCsyWRS_TRjv-TZ2xm118fBL6ULvqhPTwA",
+  authDomain: "hrsomachicken.firebaseapp.com",
+  projectId: "hrsomachicken",
+  storageBucket: "hrsomachicken.firebasestorage.app",
+  messagingSenderId: "486459712654",
+  appId: "1:486459712654:web:8348295718611ec17dd5df"
+};
+
+// Inisialisasi Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export default function App() {
   // --- State: Auth & User ---
@@ -32,61 +50,32 @@ export default function App() {
 
   const MAX_RADIUS = 100;
 
-  // --- Admin Data States ---
+  // --- Live Data States (Sourced from Firebase) ---
   const [roles, setRoles] = useState<string[]>(['Kasir', 'Pramuniaga', 'SPV', 'Manager', 'Staff Admin']);
   const [newRole, setNewRole] = useState<string>('');
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
 
-  const [employees, setEmployees] = useState<any[]>([
-    { id: 'EMP-001', name: 'Budi Santoso', email: 'budi.contoh@gmail.com', role: 'Kasir', store: 'Cabang Sudirman', pin: '1234' },
-    { id: 'EMP-002', name: 'Siti Aminah', email: 'siti.aminah@gmail.com', role: 'Pramuniaga', store: 'Cabang Thamrin', pin: '5678' },
-    { id: 'EMP-003', name: 'Agus Pratama', email: 'agus.p@gmail.com', role: 'SPV', store: 'Cabang Sudirman', pin: '1234' },
-  ]);
-  
-  const [stores, setStores] = useState<any[]>([
-    { id: 'STR-01', name: 'Cabang Sudirman', lat: '-6.1753924', lng: '106.8271528', radius: 100 },
-    { id: 'STR-02', name: 'Cabang Thamrin', lat: '-6.1834000', lng: '106.8200000', radius: 150 },
-  ]);
-  
-  const [reports, setReports] = useState<any[]>([
-    { id: 1, date: '2026-04-28', empId: 'EMP-001', name: 'Budi Santoso', store: 'Cabang Sudirman', in: '07:55', out: '15:35', status: 'Tepat Waktu' },
-    { id: 2, date: '2026-04-28', empId: 'EMP-002', name: 'Siti Aminah', store: 'Cabang Thamrin', in: '14:20', out: '21:30', status: 'Terlambat' },
-    { id: 3, date: '2026-04-29', empId: 'EMP-001', name: 'Budi Santoso', store: 'Cabang Sudirman', in: '08:00', out: '16:00', status: 'Tepat Waktu' },
-  ]);
-
-  const [leaveRequests, setLeaveRequests] = useState<any[]>([
-    { id: 'LV-001', empId: 'EMP-002', name: 'Siti Aminah', type: 'Sakit', startDate: '2026-04-20', endDate: '2026-04-23', reason: 'Tipus (Rawat Inap)', status: 'Disetujui', attachment: null },
-    { id: 'LV-002', empId: 'EMP-001', name: 'Budi Santoso', type: 'Lembur', startDate: '2026-04-28', endDate: '2026-04-28', reason: 'Stok Opname Akhir Bulan', status: 'Disetujui', attachment: null }
-  ]);
+  // --- Form & Modals States ---
   const [leaveForm, setLeaveForm] = useState<any>({ type: 'Sakit', startDate: '', endDate: '', reason: '', attachment: null });
   const [viewAttachmentUrl, setViewAttachmentUrl] = useState<any>(null); 
-
-  const [holidays, setHolidays] = useState<any[]>([
-    { id: 'HOL-001', date: '2026-05-01', name: 'Hari Buruh Internasional' }
-  ]);
   const [showHolidayModal, setShowHolidayModal] = useState<boolean>(false);
   const [holidayForm, setHolidayForm] = useState<any>({ id: '', date: '', name: '' });
   const [isEditingHoliday, setIsEditingHoliday] = useState<boolean>(false);
-
-  const [payrollConfig, setPayrollConfig] = useState<any>({
-    empId: '',
-    gajiPokok: 3000000,
-    tunjangan: 500000,
-    manualAlfa: 0 
-  });
+  const [payrollConfig, setPayrollConfig] = useState<any>({ empId: '', gajiPokok: 3000000, tunjangan: 500000, manualAlfa: 0 });
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
-
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [reportFilterDate, setReportFilterDate] = useState<string>('2026-04-28');
+  const [reportFilterDate, setReportFilterDate] = useState<string>('');
   const [reportFilterStore, setReportFilterStore] = useState<string>('Semua Toko');
-  
   const [showEmpModal, setShowEmpModal] = useState<boolean>(false);
   const [empForm, setEmpForm] = useState<any>({ id: '', name: '', email: '', role: '', store: '', pin: '' });
   const [isEditingEmp, setIsEditingEmp] = useState<boolean>(false);
-
   const [showStoreModal, setShowStoreModal] = useState<boolean>(false);
   const [storeForm, setStoreForm] = useState<any>({ id: '', name: '', lat: '', lng: '', radius: 100 });
   const [isEditingStore, setIsEditingStore] = useState<boolean>(false);
-
   const [dialog, setDialog] = useState<any>({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
 
   // --- Helper Functions ---
@@ -105,17 +94,62 @@ export default function App() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
   };
 
-  // --- Effects ---
+  // --- Effects & Firebase Listeners ---
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    
+    // Set default filter date to today
+    const y = new Date().getFullYear();
+    const m = String(new Date().getMonth() + 1).padStart(2, '0');
+    const d = String(new Date().getDate()).padStart(2, '0');
+    setReportFilterDate(`${y}-${m}-${d}`);
+
+    // Real-time Firebase Listeners
+    const unsubEmp = onSnapshot(collection(db, "employees"), (snap) => setEmployees(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+    const unsubStores = onSnapshot(collection(db, "stores"), (snap) => setStores(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+    const unsubReports = onSnapshot(collection(db, "reports"), (snap) => setReports(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+    const unsubLeaves = onSnapshot(collection(db, "leaveRequests"), (snap) => setLeaveRequests(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+    const unsubHolidays = onSnapshot(collection(db, "holidays"), (snap) => setHolidays(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+    const unsubRoles = onSnapshot(doc(db, "settings", "roles"), (document) => {
+      if (document.exists() && document.data().list) {
+        setRoles(document.data().list);
+      }
+    });
+
+    return () => {
+      clearInterval(timer);
+      unsubEmp(); unsubStores(); unsubReports(); unsubLeaves(); unsubHolidays(); unsubRoles();
+    };
   }, []);
 
   useEffect(() => {
     if (isLoggedIn && user && user?.role !== 'admin') {
       getLocation();
+      
+      // Auto-check attendance status on load
+      const y = currentTime.getFullYear();
+      const m = String(currentTime.getMonth() + 1).padStart(2, '0');
+      const d = String(currentTime.getDate()).padStart(2, '0');
+      const todayDateString = `${y}-${m}-${d}`;
+      
+      const todayReport = reports.find(r => r.empId === user.id && r.date === todayDateString);
+      if (todayReport) {
+        if (todayReport.out !== '-') {
+          setAttendanceState('done');
+          setTodayLog({ in: todayReport.in, out: todayReport.out, shift: todayReport.shift || '', status: todayReport.status });
+          setSelectedShift(todayReport.shift || '');
+        } else {
+          setAttendanceState('in');
+          setTodayLog({ in: todayReport.in, out: null, shift: todayReport.shift || '', status: todayReport.status });
+          setSelectedShift(todayReport.shift || '');
+        }
+      } else {
+        setAttendanceState('out');
+        setTodayLog({ in: null, out: null, shift: '', status: '' });
+        setSelectedShift('');
+      }
     }
-  }, [isLoggedIn, user]);
+  }, [isLoggedIn, user, reports]);
 
   const getLocation = () => {
     try {
@@ -151,7 +185,7 @@ export default function App() {
     return R * c; 
   };
 
-  // --- API Handlers ---
+  // --- API Handlers (Firebase) ---
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
@@ -165,7 +199,6 @@ export default function App() {
           setActiveTab('admin-dashboard'); 
         } else {
           const foundEmp = employees.find(emp => emp.id === loginForm.id.toUpperCase());
-          // Cek kecocokan PIN dengan data di database (employees)
           if (foundEmp && loginForm.pin === foundEmp.pin) {
             const storeData = stores.find(s => s.name === foundEmp.store);
             setUser({ 
@@ -186,32 +219,32 @@ export default function App() {
         setIsLoading(false);
       }, 1000);
     } catch (err) {
-      setLoginError('Gagal terhubung ke server.');
+      setLoginError('Gagal memproses login.');
       setIsLoading(false);
     }
   };
 
   const handleSetLibur = () => {
-    showConfirm("Konfirmasi Libur", "Anda mengkonfirmasi bahwa jadwal Anda hari ini adalah Libur / Off?", () => {
+    showConfirm("Konfirmasi Libur", "Anda mengkonfirmasi bahwa jadwal Anda hari ini adalah Libur / Off?", async () => {
       const y = currentTime.getFullYear();
       const m = String(currentTime.getMonth() + 1).padStart(2, '0');
       const d = String(currentTime.getDate()).padStart(2, '0');
       const todayDateString = `${y}-${m}-${d}`;
+      const reportId = `${user?.id}_${todayDateString}`;
 
       const newReport = {
-        id: Date.now(),
+        id: reportId,
         date: todayDateString,
         empId: user?.id,
         name: user?.name,
         store: user?.storeName,
         in: '-',
         out: '-',
-        status: 'Libur Shift'
+        status: 'Libur Shift',
+        shift: 'Libur'
       };
 
-      setReports([newReport, ...reports]);
-      setTodayLog({ in: '-', out: '-', shift: 'Libur', status: 'Libur Shift' });
-      setAttendanceState('done');
+      await setDoc(doc(db, "reports", reportId), newReport);
       showAlert("Berhasil", "Status jadwal Libur Anda untuk hari ini telah dicatat.");
     });
   };
@@ -233,6 +266,11 @@ export default function App() {
     }
 
     const timeString = currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const y = currentTime.getFullYear();
+    const m = String(currentTime.getMonth() + 1).padStart(2, '0');
+    const d = String(currentTime.getDate()).padStart(2, '0');
+    const todayDateString = `${y}-${m}-${d}`;
+    const reportId = `${user?.id}_${todayDateString}`;
     
     if (type === 'in') {
       let currentStatus = 'Tepat Waktu';
@@ -251,18 +289,21 @@ export default function App() {
         if (timeString > '14:05') currentStatus = 'Terlambat';
       }
 
-      setTodayLog({ ...todayLog, in: timeString, shift: selectedShift, status: currentStatus });
-      setAttendanceState('in');
+      const newReport = {
+        id: reportId,
+        date: todayDateString,
+        empId: user?.id,
+        name: user?.name,
+        store: user?.storeName,
+        in: timeString,
+        out: '-',
+        status: currentStatus,
+        shift: selectedShift
+      };
+
+      await setDoc(doc(db, "reports", reportId), newReport);
       
     } else { 
-      setTodayLog({ ...todayLog, out: timeString });
-      setAttendanceState('done');
-
-      const y = currentTime.getFullYear();
-      const m = String(currentTime.getMonth() + 1).padStart(2, '0');
-      const d = String(currentTime.getDate()).padStart(2, '0');
-      const todayDateString = `${y}-${m}-${d}`;
-      
       let finalStatus = todayLog.status;
       const isNationalHoliday = holidays.find(h => h.date === todayDateString);
       
@@ -270,19 +311,11 @@ export default function App() {
         finalStatus += ' (Lembur Libur)';
       }
 
-      const newReport = {
-        id: Date.now(),
-        date: todayDateString,
-        empId: user?.id,
-        name: user?.name,
-        store: user?.storeName,
-        in: todayLog.in,
+      await updateDoc(doc(db, "reports", reportId), {
         out: timeString,
         status: finalStatus
-      };
-
-      setReports([newReport, ...reports]);
-      showAlert('Absensi Selesai', 'Terima kasih, jam pulang Anda telah berhasil dicatat.');
+      });
+      showAlert('Absensi Selesai', 'Terima kasih, jam pulang Anda telah berhasil dicatat ke cloud.');
     }
   };
 
@@ -305,16 +338,30 @@ export default function App() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setLeaveForm({ ...leaveForm, attachment: reader.result });
+        // Kompresi ringan agar tidak melebihi limit Firebase Firestore (1MB)
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const scaleSize = MAX_WIDTH / img.width;
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+          setLeaveForm({ ...leaveForm, attachment: compressedBase64 });
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleLeaveSubmit = (e: any) => {
+  const handleLeaveSubmit = async (e: any) => {
     e.preventDefault();
+    const reqId = `REQ-${Math.floor(Math.random() * 90000) + 10000}`;
     const newRequest = {
-      id: `REQ-${Math.floor(Math.random() * 900) + 100}`,
+      id: reqId,
       empId: user?.id,
       name: user?.name,
       type: leaveForm.type,
@@ -324,14 +371,14 @@ export default function App() {
       attachment: leaveForm.type === 'Sakit' ? leaveForm.attachment : null, 
       status: 'Pending'
     };
-    setLeaveRequests([newRequest, ...leaveRequests]);
+    await setDoc(doc(db, "leaveRequests", reqId), newRequest);
     setLeaveForm({ type: 'Sakit', startDate: '', endDate: '', reason: '', attachment: null });
-    showAlert('Berhasil Terkirim', 'Pengajuan Anda telah dikirim dan menunggu persetujuan Admin.');
+    showAlert('Berhasil Terkirim', 'Pengajuan Anda telah berhasil dicatat ke cloud.');
   };
 
   const handleUpdateLeaveStatus = (id: any, newStatus: string) => {
-    showConfirm('Konfirmasi Status', `Anda yakin ingin ${newStatus === 'Disetujui' ? 'Menyetujui' : 'Menolak'} pengajuan ini?`, () => {
-      setLeaveRequests(leaveRequests.map(req => req.id === id ? { ...req, status: newStatus } : req));
+    showConfirm('Konfirmasi Status', `Anda yakin ingin ${newStatus === 'Disetujui' ? 'Menyetujui' : 'Menolak'} pengajuan ini?`, async () => {
+      await updateDoc(doc(db, "leaveRequests", id), { status: newStatus });
     });
   };
 
@@ -346,16 +393,20 @@ export default function App() {
     return matchDate && matchStore;
   });
 
-  const handleAddRole = (e: any) => {
+  const handleAddRole = async (e: any) => {
     e.preventDefault();
     if (newRole.trim() !== '' && !roles.includes(newRole.trim())) { 
-      setRoles([...roles, newRole.trim()]); 
+      const updatedRoles = [...roles, newRole.trim()];
+      await setDoc(doc(db, "settings", "roles"), { list: updatedRoles });
       setNewRole(''); 
     }
   };
   
   const handleDeleteRole = (roleToDelete: string) => { 
-    showConfirm('Hapus Jabatan', `Yakin ingin menghapus jabatan: ${roleToDelete}?`, () => setRoles(roles.filter(role => role !== roleToDelete))); 
+    showConfirm('Hapus Jabatan', `Yakin ingin menghapus jabatan: ${roleToDelete}?`, async () => {
+      const updatedRoles = roles.filter(role => role !== roleToDelete);
+      await setDoc(doc(db, "settings", "roles"), { list: updatedRoles });
+    }); 
   };
   
   const openEmpModal = (emp: any = null) => {
@@ -369,19 +420,17 @@ export default function App() {
     setShowEmpModal(true);
   };
   
-  const saveEmp = (e: any) => {
+  const saveEmp = async (e: any) => {
     e.preventDefault();
-    if (isEditingEmp) { 
-      setEmployees(employees.map(emp => emp.id === empForm.id ? empForm : emp)); 
-    } else { 
-      setEmployees([...employees, empForm]); 
-    }
+    await setDoc(doc(db, "employees", empForm.id.toUpperCase()), { ...empForm, id: empForm.id.toUpperCase() });
     setShowEmpModal(false);
-    showAlert('Berhasil Disimpan', `Data karyawan ${empForm.name} telah berhasil ${isEditingEmp ? 'diperbarui' : 'ditambahkan'}.`);
+    showAlert('Berhasil Disimpan', `Data karyawan ${empForm.name} telah berhasil ${isEditingEmp ? 'diperbarui' : 'ditambahkan'} ke cloud.`);
   };
   
   const deleteEmp = (id: string) => { 
-    showConfirm('Hapus Karyawan', 'Yakin ingin menghapus karyawan ini secara permanen?', () => setEmployees(employees.filter(emp => emp.id !== id))); 
+    showConfirm('Hapus Karyawan', 'Yakin ingin menghapus karyawan ini secara permanen?', async () => {
+      await deleteDoc(doc(db, "employees", id));
+    }); 
   };
   
   const openStoreModal = (store: any = null) => {
@@ -395,18 +444,16 @@ export default function App() {
     setShowStoreModal(true);
   };
   
-  const saveStore = (e: any) => {
+  const saveStore = async (e: any) => {
     e.preventDefault();
-    if (isEditingStore) { 
-      setStores(stores.map(st => st.id === storeForm.id ? storeForm : st)); 
-    } else { 
-      setStores([...stores, storeForm]); 
-    }
+    await setDoc(doc(db, "stores", storeForm.id), storeForm);
     setShowStoreModal(false);
   };
   
   const deleteStore = (id: string) => { 
-    showConfirm('Hapus Cabang Toko', 'Yakin ingin menghapus cabang toko beserta pengaturan GPS-nya?', () => setStores(stores.filter(st => st.id !== id))); 
+    showConfirm('Hapus Cabang Toko', 'Yakin ingin menghapus cabang toko beserta pengaturan GPS-nya?', async () => {
+      await deleteDoc(doc(db, "stores", id));
+    }); 
   };
   
   const openHolidayModal = (hol: any = null) => {
@@ -420,18 +467,16 @@ export default function App() {
     setShowHolidayModal(true);
   };
   
-  const saveHoliday = (e: any) => {
+  const saveHoliday = async (e: any) => {
     e.preventDefault();
-    if (isEditingHoliday) { 
-      setHolidays(holidays.map(h => h.id === holidayForm.id ? holidayForm : h)); 
-    } else { 
-      setHolidays([...holidays, holidayForm]); 
-    }
+    await setDoc(doc(db, "holidays", holidayForm.id), holidayForm);
     setShowHolidayModal(false);
   };
   
   const deleteHoliday = (id: string) => { 
-    showConfirm('Hapus Hari Libur', 'Yakin ingin menghapus hari libur ini?', () => setHolidays(holidays.filter(h => h.id !== id))); 
+    showConfirm('Hapus Hari Libur', 'Yakin ingin menghapus hari libur ini?', async () => {
+      await deleteDoc(doc(db, "holidays", id));
+    }); 
   };
   
   const exportReport = () => { 
@@ -490,7 +535,7 @@ export default function App() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-800">Hitung Gaji (Payroll)</h2>
-            <p className="text-sm text-gray-500 mt-1">Kalkulasi otomatis gaji karyawan berdasarkan data absensi.</p>
+            <p className="text-sm text-gray-500 mt-1">Kalkulasi otomatis gaji karyawan berdasarkan data absensi cloud.</p>
           </div>
           {selectedEmp && (
             <div className="flex space-x-2 w-full md:w-auto">
@@ -659,7 +704,7 @@ export default function App() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ID Pengguna</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Masukan ID Kalian</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
@@ -675,7 +720,7 @@ export default function App() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">PIN Keamanan</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">PIN Kehadiran</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
@@ -699,13 +744,10 @@ export default function App() {
             </button>
           </form>
           
-          <div className="mt-6 p-4 bg-yellow-50 rounded-lg text-xs text-yellow-800 border border-yellow-100">
-            <strong>Kredensial Demo:</strong> 
-            <ul className="list-disc ml-4 mt-1 space-y-1">
-              <li><strong>Karyawan:</strong> <code>EMP-001</code> | PIN <code>1234</code> (Budi)</li>
-              <li><strong>Karyawan:</strong> <code>EMP-002</code> | PIN <code>5678</code> (Siti)</li>
-              <li><strong>Admin:</strong> <code>ADMIN-001</code> | PIN <code>8888</code></li>
-            </ul>
+          <div className="mt-6 p-4 bg-blue-50/50 rounded-xl text-sm text-blue-800 border border-blue-100 text-center">
+            <strong>🚀 Sistem Terhubung ke Cloud</strong>
+            <p className="mt-2 mb-2 italic">Aplikasi kini tersinkronisasi penuh dengan Firebase.</p>
+            <p className="font-bold border-t border-blue-200 pt-2 text-xs">Minta Akses ke SPV Store atau ke Management</p>
           </div>
         </div>
       </div>
@@ -1608,11 +1650,11 @@ export default function App() {
         <div className="p-4 border-t border-gray-100">
           <button onClick={handleLogout} className="flex items-center space-x-3 w-full p-2 hover:bg-red-50 rounded-lg transition-colors group">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold group-hover:bg-red-200 transition-colors">
-              {user?.name?.charAt(0)}
+              {user?.name?.charAt(0) || 'A'}
             </div>
             <div className="text-left flex-1">
-              <p className="text-sm font-bold text-gray-800 group-hover:text-red-600 transition-colors">{user?.name}</p>
-              <p className="text-xs text-gray-500">{user?.id}</p>
+              <p className="text-sm font-bold text-gray-800 group-hover:text-red-600 transition-colors">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-gray-500">{user?.id || 'System'}</p>
             </div>
             <LogOut size={18} className="text-gray-400 group-hover:text-red-600 transition-colors" />
           </button>
